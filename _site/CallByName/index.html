@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Call-by-name big-step evaluation | Programming Language Foundations in Agda
+</title><!-- Begin Jekyll SEO tag v2.5.0 -->
+<meta name="generator" content="Jekyll v3.8.5" />
+<meta property="og:title" content="Call-by-name big-step evaluation" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Programming Language Foundations in Agda" />
+<meta property="og:description" content="Programming Language Foundations in Agda" />
+<link rel="canonical" href="https://plfa.github.io/CallByName/" />
+<meta property="og:url" content="https://plfa.github.io/CallByName/" />
+<meta property="og:site_name" content="Programming Language Foundations in Agda" />
+<script type="application/ld+json">
+{"description":"Programming Language Foundations in Agda","@type":"WebPage","url":"https://plfa.github.io/CallByName/","headline":"Call-by-name big-step evaluation","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"></head>
+<body><header class="site-header" role="banner">
+
+    <div class="wrapper">
+
+        <a class="site-title" href="/">Programming Language Foundations in Agda
+</a>
+
+        <nav class="site-nav">
+            <span class="menu-icon">
+                <svg viewBox="0 0 18 15" width="18px" height="15px">
+                    <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+                    <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+                    <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+                </svg>
+            </span>
+
+            <div class="trigger">
+                <a class="page-link" href="/">Table of Contents</a>
+                <a class="page-link" href="/GettingStarted/">Getting Started</a>
+            </div>
+        </nav>
+
+    </div>
+
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post">
+
+  <header class="post-header">
+      <h1 class="post-title">Call-by-name big-step evaluation</h1>
+  </header>
+
+  <p style="text-align:center;">
+    
+    <a alt="Previous chapter" href="/Confluence/">Prev</a>
+    &bullet;
+    
+    
+    <a alt="Source code" href="https://github.com/plfa/plfa.github.io/blob/dev/src/plfa/CallByName.lagda">Source</a>
+    
+    
+    &bullet;
+    <a alt="Next chapter" href="/Denotational/">Next</a>
+    
+</p>
+
+
+  <div class="post-content">
+    <pre class="Agda"><a id="164" class="Keyword">module</a> <a id="171" href="/CallByName/" class="Module">plfa.CallByName</a> <a id="187" class="Keyword">where</a></pre>
+
+<h2 id="imports">Imports</h2>
+
+<pre class="Agda"><a id="230" class="Keyword">open</a> <a id="235" class="Keyword">import</a> <a id="242" href="/Untyped/" class="Module">plfa.Untyped</a>
+  <a id="257" class="Keyword">using</a> <a id="263" class="Symbol">(</a><a id="264" href="/Untyped/#2980" class="Datatype">Context</a><a id="271" class="Symbol">;</a> <a id="273" href="/Untyped/#4150" class="Datatype Operator">_⊢_</a><a id="276" class="Symbol">;</a> <a id="278" href="/Untyped/#3365" class="Datatype Operator">_∋_</a><a id="281" class="Symbol">;</a> <a id="283" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="284" class="Symbol">;</a> <a id="286" href="/Untyped/#3002" class="InductiveConstructor">∅</a><a id="287" class="Symbol">;</a> <a id="289" href="/Untyped/#3018" class="InductiveConstructor Operator">_,_</a><a id="292" class="Symbol">;</a> <a id="294" href="/Untyped/#3401" class="InductiveConstructor">Z</a><a id="295" class="Symbol">;</a> <a id="297" href="/Untyped/#3446" class="InductiveConstructor Operator">S_</a><a id="299" class="Symbol">;</a> <a id="301" href="/Untyped/#4186" class="InductiveConstructor Operator">`_</a><a id="303" class="Symbol">;</a> <a id="305" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ_</a><a id="307" class="Symbol">;</a> <a id="309" href="/Untyped/#4298" class="InductiveConstructor Operator">_·_</a><a id="312" class="Symbol">;</a> <a id="314" href="/Untyped/#6931" class="Function">subst</a><a id="319" class="Symbol">;</a> <a id="321" href="/Untyped/#7359" class="Function">subst-zero</a><a id="331" class="Symbol">;</a>
+         <a id="342" href="/Untyped/#6623" class="Function">exts</a><a id="346" class="Symbol">;</a> <a id="348" href="/Untyped/#6171" class="Function">rename</a><a id="354" class="Symbol">)</a>
+<a id="356" class="Keyword">open</a> <a id="361" class="Keyword">import</a> <a id="368" href="/LambdaReduction/" class="Module">plfa.LambdaReduction</a>
+  <a id="391" class="Keyword">using</a> <a id="397" class="Symbol">(</a><a id="398" href="/LambdaReduction/#616" class="InductiveConstructor">β</a><a id="399" class="Symbol">;</a> <a id="401" href="/LambdaReduction/#436" class="InductiveConstructor">ξ₁</a><a id="403" class="Symbol">;</a> <a id="405" href="/LambdaReduction/#526" class="InductiveConstructor">ξ₂</a><a id="407" class="Symbol">;</a> <a id="409" href="/LambdaReduction/#724" class="InductiveConstructor">ζ</a><a id="410" class="Symbol">;</a> <a id="412" href="/LambdaReduction/#386" class="Datatype Operator">_—→_</a><a id="416" class="Symbol">;</a> <a id="418" href="/LambdaReduction/#894" class="Datatype Operator">_—↠_</a><a id="422" class="Symbol">;</a> <a id="424" href="/LambdaReduction/#1001" class="InductiveConstructor Operator">_—→⟨_⟩_</a><a id="431" class="Symbol">;</a> <a id="433" href="/LambdaReduction/#944" class="InductiveConstructor Operator">_[]</a><a id="436" class="Symbol">;</a> <a id="438" href="/LambdaReduction/#1210" class="Function">—↠-trans</a><a id="446" class="Symbol">;</a> <a id="448" href="/LambdaReduction/#1923" class="Function">appL-cong</a><a id="457" class="Symbol">)</a>
+<a id="459" class="Keyword">open</a> <a id="464" class="Keyword">import</a> <a id="471" href="/Soundness/" class="Module">plfa.Soundness</a> <a id="486" class="Keyword">using</a> <a id="492" class="Symbol">(</a><a id="493" href="/Soundness/#2673" class="Function">Subst</a><a id="498" class="Symbol">)</a>
+<a id="500" class="Keyword">open</a> <a id="505" class="Keyword">import</a> <a id="512" href="/Substitution/" class="Module">plfa.Substitution</a>
+  <a id="532" class="Keyword">using</a> <a id="538" class="Symbol">(</a><a id="539" href="/Substitution/#2076" class="Function Operator">⟪_⟫</a><a id="542" class="Symbol">;</a> <a id="544" href="/Substitution/#3004" class="Function Operator">_•_</a><a id="547" class="Symbol">;</a> <a id="549" href="/Substitution/#3357" class="Function Operator">_⨟_</a><a id="552" class="Symbol">;</a> <a id="554" href="/Substitution/#2591" class="Function">ids</a><a id="557" class="Symbol">;</a> <a id="559" href="/Substitution/#16886" class="Function">sub-id</a><a id="565" class="Symbol">;</a> <a id="567" href="/Substitution/#22488" class="Function">sub-sub</a><a id="574" class="Symbol">;</a> <a id="576" href="/Substitution/#24761" class="Function">subst-zero-exts-cons</a><a id="596" class="Symbol">)</a>
+<a id="598" class="Keyword">import</a> <a id="605" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html" class="Module">Relation.Binary.PropositionalEquality</a> <a id="643" class="Symbol">as</a> <a id="646" class="Module">Eq</a>
+<a id="649" class="Keyword">open</a> <a id="654" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html" class="Module">Eq</a> <a id="657" class="Keyword">using</a> <a id="663" class="Symbol">(</a><a id="664" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#83" class="Datatype Operator">_≡_</a><a id="667" class="Symbol">;</a> <a id="669" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a><a id="673" class="Symbol">;</a> <a id="675" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.Core.html#887" class="Function">trans</a><a id="680" class="Symbol">;</a> <a id="682" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.Core.html#838" class="Function">sym</a><a id="685" class="Symbol">)</a>
+<a id="687" class="Keyword">open</a> <a id="692" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#3975" class="Module">Eq.≡-Reasoning</a> <a id="707" class="Keyword">using</a> <a id="713" class="Symbol">(</a><a id="714" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#4076" class="Function Operator">begin_</a><a id="720" class="Symbol">;</a> <a id="722" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#4134" class="Function Operator">_≡⟨⟩_</a><a id="727" class="Symbol">;</a> <a id="729" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#4193" class="Function Operator">_≡⟨_⟩_</a><a id="735" class="Symbol">;</a> <a id="737" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#4374" class="Function Operator">_∎</a><a id="739" class="Symbol">)</a>
+
+<a id="742" class="Keyword">open</a> <a id="747" class="Keyword">import</a> <a id="754" href="https://agda.github.io/agda-stdlib/Data.Product.html" class="Module">Data.Product</a> <a id="767" class="Keyword">using</a> <a id="773" class="Symbol">(</a><a id="774" href="https://agda.github.io/agda-stdlib/Data.Product.html#1353" class="Function Operator">_×_</a><a id="777" class="Symbol">;</a> <a id="779" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#69" class="Record">Σ</a><a id="780" class="Symbol">;</a> <a id="782" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">Σ-syntax</a><a id="790" class="Symbol">;</a> <a id="792" href="https://agda.github.io/agda-stdlib/Data.Product.html#881" class="Function">∃</a><a id="793" class="Symbol">;</a> <a id="795" href="https://agda.github.io/agda-stdlib/Data.Product.html#942" class="Function">∃-syntax</a><a id="803" class="Symbol">;</a> <a id="805" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#155" class="Field">proj₁</a><a id="810" class="Symbol">;</a> <a id="812" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#167" class="Field">proj₂</a><a id="817" class="Symbol">)</a>
+  <a id="821" class="Keyword">renaming</a> <a id="830" class="Symbol">(</a><a id="831" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">_,_</a> <a id="835" class="Symbol">to</a> <a id="838" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨_,_⟩</a><a id="843" class="Symbol">)</a>
+<a id="845" class="Keyword">open</a> <a id="850" class="Keyword">import</a> <a id="857" href="https://agda.github.io/agda-stdlib/Function.html" class="Module">Function</a> <a id="866" class="Keyword">using</a> <a id="872" class="Symbol">(</a><a id="873" href="https://agda.github.io/agda-stdlib/Function.html#769" class="Function Operator">_∘_</a><a id="876" class="Symbol">)</a></pre>
+
+<h2 id="call-by-name-as-big-step-evaluation">Call-by-name as big-step evaluation</h2>
+
+<p>The call-by-name evaluation strategy is a deterministic method for
+computing the value of a program in the lambda calculus.  That is,
+call-by-name produces a value if and only if beta reduction can reduce
+the program to a lambda abstraction. In this chapter we define
+call-by-name evaluation and prove the forward direction of this
+if-and-only-if. We postpone the backward direction until after we have
+developed a denotational semantics for the lambda calculus, at which
+point the proof will be an easy corollary of properties of the
+denotational semantics.</p>
+
+<p>We present the call-by-name strategy as a relation between an an input
+term and an output value. Such a relation is often called a <em>big-step
+semantics</em>, as it relates the input term directly to the final result,
+in contrast to the small-step reduction relation <code class="highlighter-rouge">—→</code> that maps a term
+to another term in which a single sub-computation has been completed.</p>
+
+<p>To handle variables and function application, there is the choice
+between using substitution, as in <code class="highlighter-rouge">—→</code>, or to use an <em>environment</em>.
+An environment in call-by-name is a map from variables to closures,
+that is, to terms paired with their environments. We choose to use
+environments instead of substitution because the point of the
+call-by-name strategy is to be closer to an implementation of the
+language. Also, the denotational semantics introduced in later
+chapters uses environments and the proof of adequacy
+is made easier by aligning these choices.</p>
+
+<p>We define environments and closures as follows.</p>
+
+<pre class="Agda"><a id="ClosEnv"></a><a id="2462" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2470" class="Symbol">:</a> <a id="2472" href="/Untyped/#2980" class="Datatype">Context</a> <a id="2480" class="Symbol">→</a> <a id="2482" class="PrimitiveType">Set</a>
+
+<a id="2487" class="Keyword">data</a> <a id="Clos"></a><a id="2492" href="/CallByName/#2492" class="Datatype">Clos</a> <a id="2497" class="Symbol">:</a> <a id="2499" class="PrimitiveType">Set</a> <a id="2503" class="Keyword">where</a>
+  <a id="Clos.clos"></a><a id="2511" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="2516" class="Symbol">:</a> <a id="2518" class="Symbol">∀{</a><a id="2520" href="/CallByName/#2520" class="Bound">Γ</a><a id="2521" class="Symbol">}</a> <a id="2523" class="Symbol">→</a> <a id="2525" class="Symbol">(</a><a id="2526" href="/CallByName/#2526" class="Bound">M</a> <a id="2528" class="Symbol">:</a> <a id="2530" href="/CallByName/#2520" class="Bound">Γ</a> <a id="2532" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="2534" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="2535" class="Symbol">)</a> <a id="2537" class="Symbol">→</a> <a id="2539" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2547" href="/CallByName/#2520" class="Bound">Γ</a> <a id="2549" class="Symbol">→</a> <a id="2551" href="/CallByName/#2492" class="Datatype">Clos</a>
+
+<a id="2557" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2565" href="/CallByName/#2565" class="Bound">Γ</a> <a id="2567" class="Symbol">=</a> <a id="2569" class="Symbol">∀</a> <a id="2571" class="Symbol">(</a><a id="2572" href="/CallByName/#2572" class="Bound">x</a> <a id="2574" class="Symbol">:</a> <a id="2576" href="/CallByName/#2565" class="Bound">Γ</a> <a id="2578" href="/Untyped/#3365" class="Datatype Operator">∋</a> <a id="2580" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="2581" class="Symbol">)</a> <a id="2583" class="Symbol">→</a> <a id="2585" href="/CallByName/#2492" class="Datatype">Clos</a></pre>
+
+<p>As usual, we have the empty environment, and we can extend an
+environment.</p>
+
+<pre class="Agda"><a id="∅&#39;"></a><a id="2691" href="/CallByName/#2691" class="Function">∅&#39;</a> <a id="2694" class="Symbol">:</a> <a id="2696" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2704" href="/Untyped/#3002" class="InductiveConstructor">∅</a>
+<a id="2706" href="/CallByName/#2691" class="Function">∅&#39;</a> <a id="2709" class="Symbol">()</a>
+
+<a id="_,&#39;_"></a><a id="2713" href="/CallByName/#2713" class="Function Operator">_,&#39;_</a> <a id="2718" class="Symbol">:</a> <a id="2720" class="Symbol">∀</a> <a id="2722" class="Symbol">{</a><a id="2723" href="/CallByName/#2723" class="Bound">Γ</a><a id="2724" class="Symbol">}</a> <a id="2726" class="Symbol">→</a> <a id="2728" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2736" href="/CallByName/#2723" class="Bound">Γ</a> <a id="2738" class="Symbol">→</a> <a id="2740" href="/CallByName/#2492" class="Datatype">Clos</a> <a id="2745" class="Symbol">→</a> <a id="2747" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="2755" class="Symbol">(</a><a id="2756" href="/CallByName/#2723" class="Bound">Γ</a> <a id="2758" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="2760" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="2761" class="Symbol">)</a>
+<a id="2763" class="Symbol">(</a><a id="2764" href="/CallByName/#2764" class="Bound">γ</a> <a id="2766" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="2769" href="/CallByName/#2769" class="Bound">c</a><a id="2770" class="Symbol">)</a> <a id="2772" href="/Untyped/#3401" class="InductiveConstructor">Z</a> <a id="2774" class="Symbol">=</a> <a id="2776" href="/CallByName/#2769" class="Bound">c</a>
+<a id="2778" class="Symbol">(</a><a id="2779" href="/CallByName/#2779" class="Bound">γ</a> <a id="2781" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="2784" href="/CallByName/#2784" class="Bound">c</a><a id="2785" class="Symbol">)</a> <a id="2787" class="Symbol">(</a><a id="2788" href="/Untyped/#3446" class="InductiveConstructor Operator">S</a> <a id="2790" href="/CallByName/#2790" class="Bound">x</a><a id="2791" class="Symbol">)</a> <a id="2793" class="Symbol">=</a> <a id="2795" href="/CallByName/#2779" class="Bound">γ</a> <a id="2797" href="/CallByName/#2790" class="Bound">x</a></pre>
+
+<p>The big-step semantics is represented as a ternary relation,
+written <code class="highlighter-rouge">γ ⊢ M ⇓ V</code>, where <code class="highlighter-rouge">γ</code> is the environment, <code class="highlighter-rouge">M</code> is the input
+term, and <code class="highlighter-rouge">V</code> is the result value.  A <em>value</em> is a closure whose term
+is a lambda abstraction.</p>
+
+<pre class="Agda"><a id="3049" class="Keyword">data</a> <a id="_⊢_⇓_"></a><a id="3054" href="/CallByName/#3054" class="Datatype Operator">_⊢_⇓_</a> <a id="3060" class="Symbol">:</a> <a id="3062" class="Symbol">∀{</a><a id="3064" href="/CallByName/#3064" class="Bound">Γ</a><a id="3065" class="Symbol">}</a> <a id="3067" class="Symbol">→</a> <a id="3069" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3077" href="/CallByName/#3064" class="Bound">Γ</a> <a id="3079" class="Symbol">→</a> <a id="3081" class="Symbol">(</a><a id="3082" href="/CallByName/#3064" class="Bound">Γ</a> <a id="3084" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="3086" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3087" class="Symbol">)</a> <a id="3089" class="Symbol">→</a> <a id="3091" href="/CallByName/#2492" class="Datatype">Clos</a> <a id="3096" class="Symbol">→</a> <a id="3098" class="PrimitiveType">Set</a> <a id="3102" class="Keyword">where</a>
+
+  <a id="_⊢_⇓_.⇓-var"></a><a id="3111" href="/CallByName/#3111" class="InductiveConstructor">⇓-var</a> <a id="3117" class="Symbol">:</a> <a id="3119" class="Symbol">∀{</a><a id="3121" href="/CallByName/#3121" class="Bound">Γ</a><a id="3122" class="Symbol">}{</a><a id="3124" href="/CallByName/#3124" class="Bound">γ</a> <a id="3126" class="Symbol">:</a> <a id="3128" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3136" href="/CallByName/#3121" class="Bound">Γ</a><a id="3137" class="Symbol">}{</a><a id="3139" href="/CallByName/#3139" class="Bound">x</a> <a id="3141" class="Symbol">:</a> <a id="3143" href="/CallByName/#3121" class="Bound">Γ</a> <a id="3145" href="/Untyped/#3365" class="Datatype Operator">∋</a> <a id="3147" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3148" class="Symbol">}{</a><a id="3150" href="/CallByName/#3150" class="Bound">Δ</a><a id="3151" class="Symbol">}{</a><a id="3153" href="/CallByName/#3153" class="Bound">δ</a> <a id="3155" class="Symbol">:</a> <a id="3157" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3165" href="/CallByName/#3150" class="Bound">Δ</a><a id="3166" class="Symbol">}{</a><a id="3168" href="/CallByName/#3168" class="Bound">M</a> <a id="3170" class="Symbol">:</a> <a id="3172" href="/CallByName/#3150" class="Bound">Δ</a> <a id="3174" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="3176" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3177" class="Symbol">}{</a><a id="3179" href="/CallByName/#3179" class="Bound">V</a><a id="3180" class="Symbol">}</a>
+        <a id="3190" class="Symbol">→</a> <a id="3192" href="/CallByName/#3124" class="Bound">γ</a> <a id="3194" href="/CallByName/#3139" class="Bound">x</a> <a id="3196" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#83" class="Datatype Operator">≡</a> <a id="3198" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="3203" href="/CallByName/#3168" class="Bound">M</a> <a id="3205" href="/CallByName/#3153" class="Bound">δ</a>
+        <a id="3215" class="Symbol">→</a> <a id="3217" href="/CallByName/#3153" class="Bound">δ</a> <a id="3219" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3221" href="/CallByName/#3168" class="Bound">M</a> <a id="3223" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3225" href="/CallByName/#3179" class="Bound">V</a>
+          <a id="3237" class="Comment">-----------</a>
+        <a id="3257" class="Symbol">→</a> <a id="3259" href="/CallByName/#3124" class="Bound">γ</a> <a id="3261" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3263" href="/Untyped/#4186" class="InductiveConstructor Operator">`</a> <a id="3265" href="/CallByName/#3139" class="Bound">x</a> <a id="3267" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3269" href="/CallByName/#3179" class="Bound">V</a>
+
+  <a id="_⊢_⇓_.⇓-lam"></a><a id="3274" href="/CallByName/#3274" class="InductiveConstructor">⇓-lam</a> <a id="3280" class="Symbol">:</a> <a id="3282" class="Symbol">∀{</a><a id="3284" href="/CallByName/#3284" class="Bound">Γ</a><a id="3285" class="Symbol">}{</a><a id="3287" href="/CallByName/#3287" class="Bound">γ</a> <a id="3289" class="Symbol">:</a> <a id="3291" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3299" href="/CallByName/#3284" class="Bound">Γ</a><a id="3300" class="Symbol">}{</a><a id="3302" href="/CallByName/#3302" class="Bound">M</a> <a id="3304" class="Symbol">:</a> <a id="3306" href="/CallByName/#3284" class="Bound">Γ</a> <a id="3308" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="3310" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="3312" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="3314" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3315" class="Symbol">}</a>
+        <a id="3325" class="Symbol">→</a> <a id="3327" href="/CallByName/#3287" class="Bound">γ</a> <a id="3329" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3331" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="3333" href="/CallByName/#3302" class="Bound">M</a> <a id="3335" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3337" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="3342" class="Symbol">(</a><a id="3343" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="3345" href="/CallByName/#3302" class="Bound">M</a><a id="3346" class="Symbol">)</a> <a id="3348" href="/CallByName/#3287" class="Bound">γ</a>
+
+  <a id="_⊢_⇓_.⇓-app"></a><a id="3353" href="/CallByName/#3353" class="InductiveConstructor">⇓-app</a> <a id="3359" class="Symbol">:</a> <a id="3361" class="Symbol">∀{</a><a id="3363" href="/CallByName/#3363" class="Bound">Γ</a><a id="3364" class="Symbol">}{</a><a id="3366" href="/CallByName/#3366" class="Bound">γ</a> <a id="3368" class="Symbol">:</a> <a id="3370" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3378" href="/CallByName/#3363" class="Bound">Γ</a><a id="3379" class="Symbol">}{</a><a id="3381" href="/CallByName/#3381" class="Bound">L</a> <a id="3383" href="/CallByName/#3383" class="Bound">M</a> <a id="3385" class="Symbol">:</a> <a id="3387" href="/CallByName/#3363" class="Bound">Γ</a> <a id="3389" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="3391" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3392" class="Symbol">}{</a><a id="3394" href="/CallByName/#3394" class="Bound">Δ</a><a id="3395" class="Symbol">}{</a><a id="3397" href="/CallByName/#3397" class="Bound">δ</a> <a id="3399" class="Symbol">:</a> <a id="3401" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="3409" href="/CallByName/#3394" class="Bound">Δ</a><a id="3410" class="Symbol">}{</a><a id="3412" href="/CallByName/#3412" class="Bound">N</a> <a id="3414" class="Symbol">:</a> <a id="3416" href="/CallByName/#3394" class="Bound">Δ</a> <a id="3418" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="3420" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="3422" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="3424" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="3425" class="Symbol">}{</a><a id="3427" href="/CallByName/#3427" class="Bound">V</a><a id="3428" class="Symbol">}</a>
+       <a id="3437" class="Symbol">→</a> <a id="3439" href="/CallByName/#3366" class="Bound">γ</a> <a id="3441" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3443" href="/CallByName/#3381" class="Bound">L</a> <a id="3445" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3447" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="3452" class="Symbol">(</a><a id="3453" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="3455" href="/CallByName/#3412" class="Bound">N</a><a id="3456" class="Symbol">)</a> <a id="3458" href="/CallByName/#3397" class="Bound">δ</a>   <a id="3462" class="Symbol">→</a>   <a id="3466" class="Symbol">(</a><a id="3467" href="/CallByName/#3397" class="Bound">δ</a> <a id="3469" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="3472" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="3477" href="/CallByName/#3383" class="Bound">M</a> <a id="3479" href="/CallByName/#3366" class="Bound">γ</a><a id="3480" class="Symbol">)</a> <a id="3482" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3484" href="/CallByName/#3412" class="Bound">N</a> <a id="3486" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3488" href="/CallByName/#3427" class="Bound">V</a>
+         <a id="3499" class="Comment">---------------------------------------------------</a>
+       <a id="3558" class="Symbol">→</a> <a id="3560" href="/CallByName/#3366" class="Bound">γ</a> <a id="3562" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="3564" href="/CallByName/#3381" class="Bound">L</a> <a id="3566" href="/Untyped/#4298" class="InductiveConstructor Operator">·</a> <a id="3568" href="/CallByName/#3383" class="Bound">M</a> <a id="3570" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="3572" href="/CallByName/#3427" class="Bound">V</a></pre>
+
+<ul>
+  <li>
+    <p>The <code class="highlighter-rouge">⇓-var</code> rule evaluates a variable by finding the associated
+closure in the environment and then evaluating the closure.</p>
+  </li>
+  <li>
+    <p>The <code class="highlighter-rouge">⇓-lam</code> rule turns a lambda abstraction into a closure
+by packaging it up with its environment.</p>
+  </li>
+  <li>
+    <p>The <code class="highlighter-rouge">⇓-app</code> rule performs function application by first evaluating
+the term <code class="highlighter-rouge">L</code> in operator position. If that produces a closure containing
+a lambda abstraction <code class="highlighter-rouge">ƛ N</code>, then we evaluate the body <code class="highlighter-rouge">N</code> in an
+environment extended with the argument <code class="highlighter-rouge">M</code>. Note that <code class="highlighter-rouge">M</code> is not
+evaluated in rule <code class="highlighter-rouge">⇓-app</code> because this is call-by-name and not
+call-by-value.</p>
+  </li>
+</ul>
+
+<h2 id="the-big-step-semantics-is-deterministic">The big-step semantics is deterministic</h2>
+
+<p>If the big-step relation evaluates a term <code class="highlighter-rouge">M</code> to both <code class="highlighter-rouge">V</code> and
+<code class="highlighter-rouge">V′</code>, then <code class="highlighter-rouge">V</code> and <code class="highlighter-rouge">V′</code> must be identical. In other words, the
+call-by-name relation is a partial function. The proof is a
+straightforward induction on the two big-step derivations.</p>
+
+<pre class="Agda"><a id="⇓-determ"></a><a id="4483" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4492" class="Symbol">:</a> <a id="4494" class="Symbol">∀{</a><a id="4496" href="/CallByName/#4496" class="Bound">Γ</a><a id="4497" class="Symbol">}{</a><a id="4499" href="/CallByName/#4499" class="Bound">γ</a> <a id="4501" class="Symbol">:</a> <a id="4503" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="4511" href="/CallByName/#4496" class="Bound">Γ</a><a id="4512" class="Symbol">}{</a><a id="4514" href="/CallByName/#4514" class="Bound">M</a> <a id="4516" class="Symbol">:</a> <a id="4518" href="/CallByName/#4496" class="Bound">Γ</a> <a id="4520" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="4522" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="4523" class="Symbol">}{</a><a id="4525" href="/CallByName/#4525" class="Bound">V</a> <a id="4527" href="/CallByName/#4527" class="Bound">V&#39;</a> <a id="4530" class="Symbol">:</a> <a id="4532" href="/CallByName/#2492" class="Datatype">Clos</a><a id="4536" class="Symbol">}</a>
+         <a id="4547" class="Symbol">→</a> <a id="4549" href="/CallByName/#4499" class="Bound">γ</a> <a id="4551" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="4553" href="/CallByName/#4514" class="Bound">M</a> <a id="4555" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="4557" href="/CallByName/#4525" class="Bound">V</a> <a id="4559" class="Symbol">→</a> <a id="4561" href="/CallByName/#4499" class="Bound">γ</a> <a id="4563" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="4565" href="/CallByName/#4514" class="Bound">M</a> <a id="4567" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="4569" href="/CallByName/#4527" class="Bound">V&#39;</a>
+         <a id="4581" class="Symbol">→</a> <a id="4583" href="/CallByName/#4525" class="Bound">V</a> <a id="4585" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#83" class="Datatype Operator">≡</a> <a id="4587" href="/CallByName/#4527" class="Bound">V&#39;</a>
+<a id="4590" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4599" class="Symbol">(</a><a id="4600" href="/CallByName/#3111" class="InductiveConstructor">⇓-var</a> <a id="4606" href="/CallByName/#4606" class="Bound">eq1</a> <a id="4610" href="/CallByName/#4610" class="Bound">mc</a><a id="4612" class="Symbol">)</a> <a id="4614" class="Symbol">(</a><a id="4615" href="/CallByName/#3111" class="InductiveConstructor">⇓-var</a> <a id="4621" href="/CallByName/#4621" class="Bound">eq2</a> <a id="4625" href="/CallByName/#4625" class="Bound">mc&#39;</a><a id="4628" class="Symbol">)</a>
+      <a id="4636" class="Keyword">with</a> <a id="4641" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.Core.html#887" class="Function">trans</a> <a id="4647" class="Symbol">(</a><a id="4648" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.Core.html#838" class="Function">sym</a> <a id="4652" href="/CallByName/#4606" class="Bound">eq1</a><a id="4655" class="Symbol">)</a> <a id="4657" href="/CallByName/#4621" class="Bound">eq2</a>
+<a id="4661" class="Symbol">...</a> <a id="4665" class="Symbol">|</a> <a id="4667" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a> <a id="4672" class="Symbol">=</a> <a id="4674" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4683" class="Bound">mc</a> <a id="4686" class="Bound">mc&#39;</a>
+<a id="4690" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4699" href="/CallByName/#3274" class="InductiveConstructor">⇓-lam</a> <a id="4705" href="/CallByName/#3274" class="InductiveConstructor">⇓-lam</a> <a id="4711" class="Symbol">=</a> <a id="4713" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a>
+<a id="4718" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4727" class="Symbol">(</a><a id="4728" href="/CallByName/#3353" class="InductiveConstructor">⇓-app</a> <a id="4734" href="/CallByName/#4734" class="Bound">mc</a> <a id="4737" href="/CallByName/#4737" class="Bound">mc₁</a><a id="4740" class="Symbol">)</a> <a id="4742" class="Symbol">(</a><a id="4743" href="/CallByName/#3353" class="InductiveConstructor">⇓-app</a> <a id="4749" href="/CallByName/#4749" class="Bound">mc&#39;</a> <a id="4753" href="/CallByName/#4753" class="Bound">mc&#39;&#39;</a><a id="4757" class="Symbol">)</a> 
+    <a id="4764" class="Keyword">with</a> <a id="4769" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4778" href="/CallByName/#4734" class="Bound">mc</a> <a id="4781" href="/CallByName/#4749" class="Bound">mc&#39;</a>
+<a id="4785" class="Symbol">...</a> <a id="4789" class="Symbol">|</a> <a id="4791" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a> <a id="4796" class="Symbol">=</a> <a id="4798" href="/CallByName/#4483" class="Function">⇓-determ</a> <a id="4807" class="Bound">mc₁</a> <a id="4811" class="Bound">mc&#39;&#39;</a></pre>
+
+<h2 id="big-step-evaluation-implies-beta-reduction-to-a-lambda">Big-step evaluation implies beta reduction to a lambda</h2>
+
+<p>If big-step evaluation produces a value, then the input term can
+reduce to a lambda abstraction by beta reduction:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ∅' ⊢ M ⇓ clos (ƛ N′) δ
+  -----------------------------
+→ Σ[ N ∈ ∅ , ★ ⊢ ★ ] (M —↠ ƛ N)
+</code></pre></div></div>
+
+<p>The proof is by induction on the big-step derivation. As is often
+necessary, one must generalize the statement to get the induction to
+go through. In the case for <code class="highlighter-rouge">⇓-app</code> (function application), the
+argument is added to the environment, so the environment becomes
+non-empty. The corresponding β reduction substitutes the argument into
+the body of the lambda abstraction.  So we generalize the lemma to
+allow an arbitrary environment <code class="highlighter-rouge">γ</code> and we add a premise that relates
+the environment <code class="highlighter-rouge">γ</code> to an equivalent substitution <code class="highlighter-rouge">σ</code>.</p>
+
+<p>The case for <code class="highlighter-rouge">⇓-app</code> also requires that we strengthen the
+conclusion. In the case for <code class="highlighter-rouge">⇓-app</code> we have <code class="highlighter-rouge">γ ⊢ L ⇓ clos (λ N) δ</code> and
+the induction hypothesis gives us <code class="highlighter-rouge">L —↠ ƛ N′</code>, but we need to know
+that <code class="highlighter-rouge">N</code> and <code class="highlighter-rouge">N′</code> are equivalent. In particular, that <code class="highlighter-rouge">N ≡ subst τ N′</code>
+where <code class="highlighter-rouge">τ</code> is the substitution that is equivalent to <code class="highlighter-rouge">δ</code>. Therefore we
+expand the conclusion of the statement, stating that the results are
+equivalent.</p>
+
+<p>We make the two notions of equivalence precise by defining the
+following two mutually-recursive predicates <code class="highlighter-rouge">c ≈ M</code> and <code class="highlighter-rouge">γ ≈ₑ σ</code>.</p>
+
+<pre class="Agda"><a id="_≈_"></a><a id="6195" href="/CallByName/#6195" class="Function Operator">_≈_</a> <a id="6199" class="Symbol">:</a> <a id="6201" href="/CallByName/#2492" class="Datatype">Clos</a> <a id="6206" class="Symbol">→</a> <a id="6208" class="Symbol">(</a><a id="6209" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="6211" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="6213" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="6214" class="Symbol">)</a> <a id="6216" class="Symbol">→</a> <a id="6218" class="PrimitiveType">Set</a>
+<a id="_≈ₑ_"></a><a id="6222" href="/CallByName/#6222" class="Function Operator">_≈ₑ_</a> <a id="6227" class="Symbol">:</a> <a id="6229" class="Symbol">∀{</a><a id="6231" href="/CallByName/#6231" class="Bound">Γ</a><a id="6232" class="Symbol">}</a> <a id="6234" class="Symbol">→</a> <a id="6236" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="6244" href="/CallByName/#6231" class="Bound">Γ</a> <a id="6246" class="Symbol">→</a> <a id="6248" href="/Soundness/#2673" class="Function">Subst</a> <a id="6254" href="/CallByName/#6231" class="Bound">Γ</a> <a id="6256" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="6258" class="Symbol">→</a> <a id="6260" class="PrimitiveType">Set</a>
+
+<a id="6265" class="Symbol">(</a><a id="6266" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="6271" class="Symbol">{</a><a id="6272" href="/CallByName/#6272" class="Bound">Γ</a><a id="6273" class="Symbol">}</a> <a id="6275" href="/CallByName/#6275" class="Bound">M</a> <a id="6277" href="/CallByName/#6277" class="Bound">γ</a><a id="6278" class="Symbol">)</a> <a id="6280" href="/CallByName/#6195" class="Function Operator">≈</a> <a id="6282" href="/CallByName/#6282" class="Bound">N</a> <a id="6284" class="Symbol">=</a> <a id="6286" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">Σ[</a> <a id="6289" href="/CallByName/#6289" class="Bound">σ</a> <a id="6291" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">∈</a> <a id="6293" href="/Soundness/#2673" class="Function">Subst</a> <a id="6299" href="/CallByName/#6272" class="Bound">Γ</a> <a id="6301" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="6303" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">]</a> <a id="6305" href="/CallByName/#6277" class="Bound">γ</a> <a id="6307" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="6310" href="/CallByName/#6289" class="Bound">σ</a> <a id="6312" href="https://agda.github.io/agda-stdlib/Data.Product.html#1353" class="Function Operator">×</a> <a id="6314" class="Symbol">(</a><a id="6315" href="/CallByName/#6282" class="Bound">N</a> <a id="6317" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#83" class="Datatype Operator">≡</a> <a id="6319" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="6321" href="/CallByName/#6289" class="Bound">σ</a> <a id="6323" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="6325" href="/CallByName/#6275" class="Bound">M</a><a id="6326" class="Symbol">)</a>
+
+<a id="6329" href="/CallByName/#6329" class="Bound">γ</a> <a id="6331" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="6334" href="/CallByName/#6334" class="Bound">σ</a> <a id="6336" class="Symbol">=</a> <a id="6338" class="Symbol">∀{</a><a id="6340" href="/CallByName/#6340" class="Bound">x</a><a id="6341" class="Symbol">}</a> <a id="6343" class="Symbol">→</a> <a id="6345" class="Symbol">(</a><a id="6346" href="/CallByName/#6329" class="Bound">γ</a> <a id="6348" href="/CallByName/#6340" class="Bound">x</a><a id="6349" class="Symbol">)</a> <a id="6351" href="/CallByName/#6195" class="Function Operator">≈</a> <a id="6353" class="Symbol">(</a><a id="6354" href="/CallByName/#6334" class="Bound">σ</a> <a id="6356" href="/CallByName/#6340" class="Bound">x</a><a id="6357" class="Symbol">)</a></pre>
+
+<p>We can now state the main lemma:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>If γ ⊢ M ⇓ c  and  γ ≈ₑ σ,
+then  ⟪ σ ⟫ M —↠ N  and  c ≈ N  for some N.
+</code></pre></div></div>
+
+<p>Before starting the proof, we establish a couple lemmas
+about equivalent environments and substitutions.</p>
+
+<p>The empty environment is equivalent to the identity substitution.</p>
+
+<pre class="Agda"><a id="≈ₑ-id"></a><a id="6671" href="/CallByName/#6671" class="Function">≈ₑ-id</a> <a id="6677" class="Symbol">:</a> <a id="6679" href="/CallByName/#2691" class="Function">∅&#39;</a> <a id="6682" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="6685" href="/Substitution/#2591" class="Function">ids</a>
+<a id="6689" href="/CallByName/#6671" class="Function">≈ₑ-id</a> <a id="6695" class="Symbol">{()}</a></pre>
+
+<p>We define an auxilliary function for extending a substitution.</p>
+
+<pre class="Agda"><a id="ext-subst"></a><a id="6789" href="/CallByName/#6789" class="Function">ext-subst</a> <a id="6799" class="Symbol">:</a> <a id="6801" class="Symbol">∀{</a><a id="6803" href="/CallByName/#6803" class="Bound">Γ</a> <a id="6805" href="/CallByName/#6805" class="Bound">Δ</a><a id="6806" class="Symbol">}</a> <a id="6808" class="Symbol">→</a> <a id="6810" href="/Soundness/#2673" class="Function">Subst</a> <a id="6816" href="/CallByName/#6803" class="Bound">Γ</a> <a id="6818" href="/CallByName/#6805" class="Bound">Δ</a> <a id="6820" class="Symbol">→</a> <a id="6822" href="/CallByName/#6805" class="Bound">Δ</a> <a id="6824" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="6826" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="6828" class="Symbol">→</a> <a id="6830" href="/Soundness/#2673" class="Function">Subst</a> <a id="6836" class="Symbol">(</a><a id="6837" href="/CallByName/#6803" class="Bound">Γ</a> <a id="6839" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="6841" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="6842" class="Symbol">)</a> <a id="6844" href="/CallByName/#6805" class="Bound">Δ</a>
+<a id="6846" href="/CallByName/#6789" class="Function">ext-subst</a><a id="6855" class="Symbol">{</a><a id="6856" href="/CallByName/#6856" class="Bound">Γ</a><a id="6857" class="Symbol">}{</a><a id="6859" href="/CallByName/#6859" class="Bound">Δ</a><a id="6860" class="Symbol">}</a> <a id="6862" href="/CallByName/#6862" class="Bound">σ</a> <a id="6864" href="/CallByName/#6864" class="Bound">N</a> <a id="6866" class="Symbol">{</a><a id="6867" href="/CallByName/#6867" class="Bound">A</a><a id="6868" class="Symbol">}</a> <a id="6870" class="Symbol">=</a> <a id="6872" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="6874" href="/Untyped/#7359" class="Function">subst-zero</a> <a id="6885" href="/CallByName/#6864" class="Bound">N</a> <a id="6887" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="6889" href="https://agda.github.io/agda-stdlib/Function.html#769" class="Function Operator">∘</a> <a id="6891" href="/Untyped/#6623" class="Function">exts</a> <a id="6896" href="/CallByName/#6862" class="Bound">σ</a></pre>
+
+<p>The next lemma states that if you start with an equivalent
+environment and substitution <code class="highlighter-rouge">γ ≈ₑ σ</code>, extending them with
+an equivalent closure and term <code class="highlighter-rouge">c ≈ N</code> produces
+an equivalent environment and substitution:
+<code class="highlighter-rouge">(γ ,' c) ≈ₑ (ext-subst σ N)</code>.</p>
+
+<pre class="Agda"><a id="≈ₑ-ext"></a><a id="7166" href="/CallByName/#7166" class="Function">≈ₑ-ext</a> <a id="7173" class="Symbol">:</a> <a id="7175" class="Symbol">∀</a> <a id="7177" class="Symbol">{</a><a id="7178" href="/CallByName/#7178" class="Bound">Γ</a><a id="7179" class="Symbol">}</a> <a id="7181" class="Symbol">{</a><a id="7182" href="/CallByName/#7182" class="Bound">γ</a> <a id="7184" class="Symbol">:</a> <a id="7186" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="7194" href="/CallByName/#7178" class="Bound">Γ</a><a id="7195" class="Symbol">}</a> <a id="7197" class="Symbol">{</a><a id="7198" href="/CallByName/#7198" class="Bound">σ</a> <a id="7200" class="Symbol">:</a> <a id="7202" href="/Soundness/#2673" class="Function">Subst</a> <a id="7208" href="/CallByName/#7178" class="Bound">Γ</a> <a id="7210" href="/Untyped/#3002" class="InductiveConstructor">∅</a><a id="7211" class="Symbol">}</a> <a id="7213" class="Symbol">{</a><a id="7214" href="/CallByName/#7214" class="Bound">c</a><a id="7215" class="Symbol">}</a> <a id="7217" class="Symbol">{</a><a id="7218" href="/CallByName/#7218" class="Bound">N</a> <a id="7220" class="Symbol">:</a> <a id="7222" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="7224" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="7226" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="7227" class="Symbol">}</a>
+      <a id="7235" class="Symbol">→</a> <a id="7237" href="/CallByName/#7182" class="Bound">γ</a> <a id="7239" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="7242" href="/CallByName/#7198" class="Bound">σ</a>  <a id="7245" class="Symbol">→</a>  <a id="7248" href="/CallByName/#7214" class="Bound">c</a> <a id="7250" href="/CallByName/#6195" class="Function Operator">≈</a> <a id="7252" href="/CallByName/#7218" class="Bound">N</a>
+        <a id="7262" class="Comment">--------------------------</a>
+      <a id="7295" class="Symbol">→</a> <a id="7297" class="Symbol">(</a><a id="7298" href="/CallByName/#7182" class="Bound">γ</a> <a id="7300" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="7303" href="/CallByName/#7214" class="Bound">c</a><a id="7304" class="Symbol">)</a> <a id="7306" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="7309" class="Symbol">(</a><a id="7310" href="/CallByName/#6789" class="Function">ext-subst</a> <a id="7320" href="/CallByName/#7198" class="Bound">σ</a> <a id="7322" href="/CallByName/#7218" class="Bound">N</a><a id="7323" class="Symbol">)</a>
+<a id="7325" href="/CallByName/#7166" class="Function">≈ₑ-ext</a> <a id="7332" class="Symbol">{</a><a id="7333" href="/CallByName/#7333" class="Bound">Γ</a><a id="7334" class="Symbol">}</a> <a id="7336" class="Symbol">{</a><a id="7337" href="/CallByName/#7337" class="Bound">γ</a><a id="7338" class="Symbol">}</a> <a id="7340" class="Symbol">{</a><a id="7341" href="/CallByName/#7341" class="Bound">σ</a><a id="7342" class="Symbol">}</a> <a id="7344" class="Symbol">{</a><a id="7345" href="/CallByName/#7345" class="Bound">c</a><a id="7346" class="Symbol">}</a> <a id="7348" class="Symbol">{</a><a id="7349" href="/CallByName/#7349" class="Bound">N</a><a id="7350" class="Symbol">}</a> <a id="7352" href="/CallByName/#7352" class="Bound">γ≈ₑσ</a> <a id="7357" href="/CallByName/#7357" class="Bound">c≈N</a> <a id="7361" class="Symbol">{</a><a id="7362" href="/CallByName/#7362" class="Bound">x</a><a id="7363" class="Symbol">}</a> <a id="7365" class="Symbol">=</a> <a id="7367" href="/CallByName/#7466" class="Function">goal</a>
+   <a id="7375" class="Keyword">where</a>
+   <a id="7384" href="/CallByName/#7384" class="Function">ext-cons</a> <a id="7393" class="Symbol">:</a> <a id="7395" class="Symbol">(</a><a id="7396" href="/CallByName/#7337" class="Bound">γ</a> <a id="7398" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="7401" href="/CallByName/#7345" class="Bound">c</a><a id="7402" class="Symbol">)</a> <a id="7404" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="7407" class="Symbol">(</a><a id="7408" href="/CallByName/#7349" class="Bound">N</a> <a id="7410" href="/Substitution/#3004" class="Function Operator">•</a> <a id="7412" href="/CallByName/#7341" class="Bound">σ</a><a id="7413" class="Symbol">)</a>
+   <a id="7418" href="/CallByName/#7384" class="Function">ext-cons</a> <a id="7427" class="Symbol">{</a><a id="7428" href="/Untyped/#3401" class="InductiveConstructor">Z</a><a id="7429" class="Symbol">}</a> <a id="7431" class="Symbol">=</a> <a id="7433" href="/CallByName/#7357" class="Bound">c≈N</a>
+   <a id="7440" href="/CallByName/#7384" class="Function">ext-cons</a> <a id="7449" class="Symbol">{</a><a id="7450" href="/Untyped/#3446" class="InductiveConstructor Operator">S</a> <a id="7452" href="/CallByName/#7452" class="Bound">x</a><a id="7453" class="Symbol">}</a> <a id="7455" class="Symbol">=</a> <a id="7457" href="/CallByName/#7352" class="Bound">γ≈ₑσ</a>
+
+   <a id="7466" href="/CallByName/#7466" class="Function">goal</a> <a id="7471" class="Symbol">:</a> <a id="7473" class="Symbol">(</a><a id="7474" href="/CallByName/#7337" class="Bound">γ</a> <a id="7476" href="/CallByName/#2713" class="Function Operator">,&#39;</a> <a id="7479" href="/CallByName/#7345" class="Bound">c</a><a id="7480" class="Symbol">)</a> <a id="7482" href="/CallByName/#7362" class="Bound">x</a> <a id="7484" href="/CallByName/#6195" class="Function Operator">≈</a> <a id="7486" href="/CallByName/#6789" class="Function">ext-subst</a> <a id="7496" href="/CallByName/#7341" class="Bound">σ</a> <a id="7498" href="/CallByName/#7349" class="Bound">N</a> <a id="7500" href="/CallByName/#7362" class="Bound">x</a>
+   <a id="7505" href="/CallByName/#7466" class="Function">goal</a>
+       <a id="7517" class="Keyword">with</a> <a id="7522" href="/CallByName/#7384" class="Function">ext-cons</a> <a id="7531" class="Symbol">{</a><a id="7532" href="/CallByName/#7362" class="Bound">x</a><a id="7533" class="Symbol">}</a>
+   <a id="7538" class="Symbol">...</a> <a id="7542" class="Symbol">|</a> <a id="7544" href="/CallByName/#7544" class="Bound">a</a> <a id="7546" class="Keyword">rewrite</a> <a id="7554" href="https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.Core.html#838" class="Function">sym</a> <a id="7558" class="Symbol">(</a><a id="7559" href="/Substitution/#24761" class="Function">subst-zero-exts-cons</a><a id="7579" class="Symbol">{</a><a id="7580" href="/CallByName/#7333" class="Bound">Γ</a><a id="7581" class="Symbol">}{</a><a id="7583" href="/Untyped/#3002" class="InductiveConstructor">∅</a><a id="7584" class="Symbol">}{</a><a id="7586" href="/CallByName/#7341" class="Bound">σ</a><a id="7587" class="Symbol">}{</a><a id="7589" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="7590" class="Symbol">}{</a><a id="7592" href="/CallByName/#7349" class="Bound">N</a><a id="7593" class="Symbol">}{</a><a id="7595" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="7596" class="Symbol">})</a> <a id="7599" class="Symbol">=</a> <a id="7601" href="/CallByName/#7544" class="Bound">a</a></pre>
+
+<p>To prove <code class="highlighter-rouge">≈ₑ-ext</code>, we make use of the fact that <code class="highlighter-rouge">ext-subst σ N</code> is
+equivalent to <code class="highlighter-rouge">N • σ</code> (by <code class="highlighter-rouge">subst-zero-exts-cons</code>). So we just
+need to prove that <code class="highlighter-rouge">(γ ,' c) ≈ₑ (N • σ)</code>, which is easy.
+We proceed by cases on the input variable.</p>
+
+<ul>
+  <li>
+    <p>If it is <code class="highlighter-rouge">Z</code>, then we immediately conclude using the
+premise <code class="highlighter-rouge">c ≈ N</code>.</p>
+  </li>
+  <li>
+    <p>If it is <code class="highlighter-rouge">S x</code>, then we immediately conclude using
+premise <code class="highlighter-rouge">γ ≈ₑ σ</code>.</p>
+  </li>
+</ul>
+
+<p>We arive at the main lemma: if <code class="highlighter-rouge">M</code> big steps to a
+closure <code class="highlighter-rouge">c</code> in environment <code class="highlighter-rouge">γ</code>, and if <code class="highlighter-rouge">γ ≈ₑ σ</code>, then <code class="highlighter-rouge">⟪ σ ⟫ M</code> reduces
+to some term <code class="highlighter-rouge">N</code> that is equivalent to <code class="highlighter-rouge">c</code>. We describe the proof
+below.</p>
+
+<pre class="Agda"><a id="⇓→—↠×𝔹"></a><a id="8204" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a> <a id="8211" class="Symbol">:</a> <a id="8213" class="Symbol">∀{</a><a id="8215" href="/CallByName/#8215" class="Bound">Γ</a><a id="8216" class="Symbol">}{</a><a id="8218" href="/CallByName/#8218" class="Bound">γ</a> <a id="8220" class="Symbol">:</a> <a id="8222" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="8230" href="/CallByName/#8215" class="Bound">Γ</a><a id="8231" class="Symbol">}{</a><a id="8233" href="/CallByName/#8233" class="Bound">σ</a> <a id="8235" class="Symbol">:</a> <a id="8237" href="/Soundness/#2673" class="Function">Subst</a> <a id="8243" href="/CallByName/#8215" class="Bound">Γ</a> <a id="8245" href="/Untyped/#3002" class="InductiveConstructor">∅</a><a id="8246" class="Symbol">}{</a><a id="8248" href="/CallByName/#8248" class="Bound">M</a> <a id="8250" class="Symbol">:</a> <a id="8252" href="/CallByName/#8215" class="Bound">Γ</a> <a id="8254" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="8256" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="8257" class="Symbol">}{</a><a id="8259" href="/CallByName/#8259" class="Bound">c</a> <a id="8261" class="Symbol">:</a> <a id="8263" href="/CallByName/#2492" class="Datatype">Clos</a><a id="8267" class="Symbol">}</a>
+       <a id="8276" class="Symbol">→</a> <a id="8278" href="/CallByName/#8218" class="Bound">γ</a> <a id="8280" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="8282" href="/CallByName/#8248" class="Bound">M</a> <a id="8284" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="8286" href="/CallByName/#8259" class="Bound">c</a>  <a id="8289" class="Symbol">→</a>  <a id="8292" href="/CallByName/#8218" class="Bound">γ</a> <a id="8294" href="/CallByName/#6222" class="Function Operator">≈ₑ</a> <a id="8297" href="/CallByName/#8233" class="Bound">σ</a>
+         <a id="8308" class="Comment">---------------------------------------</a>
+       <a id="8355" class="Symbol">→</a> <a id="8357" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">Σ[</a> <a id="8360" href="/CallByName/#8360" class="Bound">N</a> <a id="8362" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">∈</a> <a id="8364" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="8366" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="8368" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="8370" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">]</a> <a id="8372" class="Symbol">(</a><a id="8373" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="8375" href="/CallByName/#8233" class="Bound">σ</a> <a id="8377" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="8379" href="/CallByName/#8248" class="Bound">M</a> <a id="8381" href="/LambdaReduction/#894" class="Datatype Operator">—↠</a> <a id="8384" href="/CallByName/#8360" class="Bound">N</a><a id="8385" class="Symbol">)</a> <a id="8387" href="https://agda.github.io/agda-stdlib/Data.Product.html#1353" class="Function Operator">×</a> <a id="8389" href="/CallByName/#8259" class="Bound">c</a> <a id="8391" href="/CallByName/#6195" class="Function Operator">≈</a> <a id="8393" href="/CallByName/#8360" class="Bound">N</a>
+<a id="8395" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a> <a id="8402" class="Symbol">{</a><a id="8403" class="Argument">γ</a> <a id="8405" class="Symbol">=</a> <a id="8407" href="/CallByName/#8407" class="Bound">γ</a><a id="8408" class="Symbol">}</a> <a id="8410" class="Symbol">(</a><a id="8411" href="/CallByName/#3111" class="InductiveConstructor">⇓-var</a><a id="8416" class="Symbol">{</a><a id="8417" class="Argument">x</a> <a id="8419" class="Symbol">=</a> <a id="8421" href="/CallByName/#8421" class="Bound">x</a><a id="8422" class="Symbol">}</a> <a id="8424" href="/CallByName/#8424" class="Bound">γx≡Lδ</a> <a id="8430" href="/CallByName/#8430" class="Bound">δ⊢L⇓c</a><a id="8435" class="Symbol">)</a> <a id="8437" href="/CallByName/#8437" class="Bound">γ≈ₑσ</a>
+    <a id="8446" class="Keyword">with</a> <a id="8451" href="/CallByName/#8407" class="Bound">γ</a> <a id="8453" href="/CallByName/#8421" class="Bound">x</a> <a id="8455" class="Symbol">|</a> <a id="8457" href="/CallByName/#8437" class="Bound">γ≈ₑσ</a> <a id="8462" class="Symbol">{</a><a id="8463" href="/CallByName/#8421" class="Bound">x</a><a id="8464" class="Symbol">}</a> <a id="8466" class="Symbol">|</a> <a id="8468" href="/CallByName/#8424" class="Bound">γx≡Lδ</a>
+<a id="8474" class="Symbol">...</a> <a id="8478" class="Symbol">|</a> <a id="8480" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="8485" href="/CallByName/#8485" class="Bound">L</a> <a id="8487" href="/CallByName/#8487" class="Bound">δ</a> <a id="8489" class="Symbol">|</a> <a id="8491" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8493" href="/CallByName/#8493" class="Bound">τ</a> <a id="8495" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8497" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8499" href="/CallByName/#8499" class="Bound">δ≈ₑτ</a> <a id="8504" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8506" href="/CallByName/#8506" class="Bound">σx≡τL</a> <a id="8512" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8514" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8516" class="Symbol">|</a> <a id="8518" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a>
+    <a id="8527" class="Keyword">with</a> <a id="8532" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a><a id="8538" class="Symbol">{</a><a id="8539" class="Argument">σ</a> <a id="8541" class="Symbol">=</a> <a id="8543" href="/CallByName/#8493" class="Bound">τ</a><a id="8544" class="Symbol">}</a> <a id="8546" class="Bound">δ⊢L⇓c</a> <a id="8552" href="/CallByName/#8499" class="Bound">δ≈ₑτ</a>
+<a id="8557" class="Symbol">...</a> <a id="8561" class="Symbol">|</a> <a id="8563" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8565" href="/CallByName/#8565" class="Bound">N</a> <a id="8567" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8569" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8571" href="/CallByName/#8571" class="Bound">τL—↠N</a> <a id="8577" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8579" href="/CallByName/#8579" class="Bound">c≈N</a> <a id="8583" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8585" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8587" class="Keyword">rewrite</a> <a id="8595" class="Bound">σx≡τL</a> <a id="8601" class="Symbol">=</a>
+      <a id="8609" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8611" href="/CallByName/#8565" class="Bound">N</a> <a id="8613" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8615" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8617" href="/CallByName/#8571" class="Bound">τL—↠N</a> <a id="8623" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8625" href="/CallByName/#8579" class="Bound">c≈N</a> <a id="8629" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8631" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a>
+<a id="8633" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a> <a id="8640" class="Symbol">{</a><a id="8641" class="Argument">σ</a> <a id="8643" class="Symbol">=</a> <a id="8645" href="/CallByName/#8645" class="Bound">σ</a><a id="8646" class="Symbol">}</a> <a id="8648" class="Symbol">{</a><a id="8649" class="Argument">c</a> <a id="8651" class="Symbol">=</a> <a id="8653" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="8658" class="Symbol">(</a><a id="8659" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="8661" href="/CallByName/#8661" class="Bound">N</a><a id="8662" class="Symbol">)</a> <a id="8664" href="/CallByName/#8664" class="Bound">γ</a><a id="8665" class="Symbol">}</a> <a id="8667" href="/CallByName/#3274" class="InductiveConstructor">⇓-lam</a> <a id="8673" href="/CallByName/#8673" class="Bound">γ≈ₑσ</a> <a id="8678" class="Symbol">=</a>
+    <a id="8684" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8686" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="8688" href="/CallByName/#8645" class="Bound">σ</a> <a id="8690" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="8692" class="Symbol">(</a><a id="8693" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="8695" href="/CallByName/#8661" class="Bound">N</a><a id="8696" class="Symbol">)</a> <a id="8698" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8700" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8702" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="8704" href="/CallByName/#8645" class="Bound">σ</a> <a id="8706" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="8708" class="Symbol">(</a><a id="8709" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="8711" href="/CallByName/#8661" class="Bound">N</a><a id="8712" class="Symbol">)</a> <a id="8714" href="/LambdaReduction/#944" class="InductiveConstructor Operator">[]</a> <a id="8717" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8719" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8721" href="/CallByName/#8645" class="Bound">σ</a> <a id="8723" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8725" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8727" href="/CallByName/#8673" class="Bound">γ≈ₑσ</a> <a id="8732" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8734" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a> <a id="8739" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8741" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8743" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8745" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a>
+<a id="8747" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a><a id="8753" class="Symbol">{</a><a id="8754" href="/CallByName/#8754" class="Bound">Γ</a><a id="8755" class="Symbol">}{</a><a id="8757" href="/CallByName/#8757" class="Bound">γ</a><a id="8758" class="Symbol">}</a> <a id="8760" class="Symbol">{</a><a id="8761" class="Argument">σ</a> <a id="8763" class="Symbol">=</a> <a id="8765" href="/CallByName/#8765" class="Bound">σ</a><a id="8766" class="Symbol">}</a> <a id="8768" class="Symbol">{</a><a id="8769" href="/CallByName/#8769" class="Bound">L</a> <a id="8771" href="/Untyped/#4298" class="InductiveConstructor Operator">·</a> <a id="8773" href="/CallByName/#8773" class="Bound">M</a><a id="8774" class="Symbol">}</a> <a id="8776" class="Symbol">{</a><a id="8777" href="/CallByName/#8777" class="Bound">c</a><a id="8778" class="Symbol">}</a> <a id="8780" class="Symbol">(</a><a id="8781" href="/CallByName/#3353" class="InductiveConstructor">⇓-app</a> <a id="8787" class="Symbol">{</a><a id="8788" class="Argument">N</a> <a id="8790" class="Symbol">=</a> <a id="8792" href="/CallByName/#8792" class="Bound">N</a><a id="8793" class="Symbol">}</a> <a id="8795" href="/CallByName/#8795" class="Bound">L⇓ƛNδ</a> <a id="8801" href="/CallByName/#8801" class="Bound">N⇓c</a><a id="8804" class="Symbol">)</a> <a id="8806" href="/CallByName/#8806" class="Bound">γ≈ₑσ</a>
+    <a id="8815" class="Keyword">with</a> <a id="8820" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a><a id="8826" class="Symbol">{</a><a id="8827" class="Argument">σ</a> <a id="8829" class="Symbol">=</a> <a id="8831" href="/CallByName/#8765" class="Bound">σ</a><a id="8832" class="Symbol">}</a> <a id="8834" href="/CallByName/#8795" class="Bound">L⇓ƛNδ</a> <a id="8840" href="/CallByName/#8806" class="Bound">γ≈ₑσ</a>
+<a id="8845" class="Symbol">...</a> <a id="8849" class="Symbol">|</a> <a id="8851" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8853" class="Symbol">_</a> <a id="8855" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8857" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8859" href="/CallByName/#8859" class="Bound">σL—↠ƛτN</a> <a id="8867" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8869" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8871" href="/CallByName/#8871" class="Bound">τ</a> <a id="8873" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8875" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8877" href="/CallByName/#8877" class="Bound">δ≈ₑτ</a> <a id="8882" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="8884" href="/CallByName/#8884" class="Bound">≡ƛτN</a> <a id="8889" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8891" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8893" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8895" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="8897" class="Keyword">rewrite</a> <a id="8905" href="/CallByName/#8884" class="Bound">≡ƛτN</a>
+    <a id="8914" class="Keyword">with</a> <a id="8919" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a> <a id="8926" class="Symbol">{</a><a id="8927" class="Argument">σ</a> <a id="8929" class="Symbol">=</a> <a id="8931" href="/CallByName/#6789" class="Function">ext-subst</a> <a id="8941" href="/CallByName/#8871" class="Bound">τ</a> <a id="8943" class="Symbol">(</a><a id="8944" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="8946" class="Bound">σ</a> <a id="8948" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="8950" class="Bound">M</a><a id="8951" class="Symbol">)}</a> <a id="8954" class="Bound">N⇓c</a>
+           <a id="8969" class="Symbol">(λ</a> <a id="8972" class="Symbol">{</a><a id="8973" href="/CallByName/#8973" class="Bound">x</a><a id="8974" class="Symbol">}</a> <a id="8976" class="Symbol">→</a> <a id="8978" href="/CallByName/#7166" class="Function">≈ₑ-ext</a><a id="8984" class="Symbol">{</a><a id="8985" class="Argument">σ</a> <a id="8987" class="Symbol">=</a> <a id="8989" href="/CallByName/#8871" class="Bound">τ</a><a id="8990" class="Symbol">}</a> <a id="8992" href="/CallByName/#8877" class="Bound">δ≈ₑτ</a> <a id="8997" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="8999" class="Bound">σ</a> <a id="9001" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9003" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="9005" class="Bound">γ≈ₑσ</a> <a id="9010" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9012" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Equality.html#140" class="InductiveConstructor">refl</a> <a id="9017" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="9019" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="9021" class="Symbol">{</a><a id="9022" href="/CallByName/#8973" class="Bound">x</a><a id="9023" class="Symbol">})</a>
+       <a id="9033" class="Symbol">|</a> <a id="9035" href="/LambdaReduction/#616" class="InductiveConstructor">β</a><a id="9036" class="Symbol">{</a><a id="9037" href="/Untyped/#3002" class="InductiveConstructor">∅</a><a id="9038" class="Symbol">}{</a><a id="9040" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="9042" href="/Untyped/#6623" class="Function">exts</a> <a id="9047" href="/CallByName/#8871" class="Bound">τ</a> <a id="9049" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="9051" class="Bound">N</a><a id="9052" class="Symbol">}{</a><a id="9054" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="9056" class="Bound">σ</a> <a id="9058" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="9060" class="Bound">M</a><a id="9061" class="Symbol">}</a>
+<a id="9063" class="Symbol">...</a> <a id="9067" class="Symbol">|</a> <a id="9069" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="9071" href="/CallByName/#9071" class="Bound">N&#39;</a> <a id="9074" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9076" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="9078" href="/CallByName/#9078" class="Bound">—↠N&#39;</a> <a id="9083" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9085" href="/CallByName/#9085" class="Bound">c≈N&#39;</a> <a id="9090" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="9092" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="9094" class="Symbol">|</a> <a id="9096" href="/CallByName/#9096" class="Bound">ƛτN·σM—→</a>
+    <a id="9109" class="Keyword">rewrite</a> <a id="9117" href="/Substitution/#22488" class="Function">sub-sub</a><a id="9124" class="Symbol">{</a><a id="9125" class="Argument">M</a> <a id="9127" class="Symbol">=</a> <a id="9129" class="Bound">N</a><a id="9130" class="Symbol">}{</a><a id="9132" class="Argument">σ₁</a> <a id="9135" class="Symbol">=</a> <a id="9137" href="/Untyped/#6623" class="Function">exts</a> <a id="9142" class="Bound">τ</a><a id="9143" class="Symbol">}{</a><a id="9145" class="Argument">σ₂</a> <a id="9148" class="Symbol">=</a> <a id="9150" href="/Untyped/#7359" class="Function">subst-zero</a> <a id="9161" class="Symbol">(</a><a id="9162" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="9164" class="Bound">σ</a> <a id="9166" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="9168" class="Bound">M</a><a id="9169" class="Symbol">)}</a> <a id="9172" class="Symbol">=</a>
+    <a id="9178" class="Keyword">let</a> <a id="9182" href="/CallByName/#9182" class="Bound">rs</a> <a id="9185" class="Symbol">=</a> <a id="9187" class="Symbol">(</a><a id="9188" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="9190" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="9192" href="/Untyped/#6623" class="Function">exts</a> <a id="9197" class="Bound">τ</a> <a id="9199" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="9201" class="Bound">N</a><a id="9202" class="Symbol">)</a> <a id="9204" href="/Untyped/#4298" class="InductiveConstructor Operator">·</a> <a id="9206" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="9208" class="Bound">σ</a> <a id="9210" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="9212" class="Bound">M</a> <a id="9214" href="/LambdaReduction/#1001" class="InductiveConstructor Operator">—→⟨</a> <a id="9218" href="/CallByName/#9096" class="Bound">ƛτN·σM—→</a> <a id="9227" href="/LambdaReduction/#1001" class="InductiveConstructor Operator">⟩</a> <a id="9229" href="/CallByName/#9078" class="Bound">—↠N&#39;</a> <a id="9234" class="Keyword">in</a>
+    <a id="9241" class="Keyword">let</a> <a id="9245" href="/CallByName/#9245" class="Bound">g</a> <a id="9247" class="Symbol">=</a> <a id="9249" href="/LambdaReduction/#1210" class="Function">—↠-trans</a> <a id="9258" class="Symbol">(</a><a id="9259" href="/LambdaReduction/#1923" class="Function">appL-cong</a> <a id="9269" class="Bound">σL—↠ƛτN</a><a id="9276" class="Symbol">)</a> <a id="9278" href="/CallByName/#9182" class="Bound">rs</a> <a id="9281" class="Keyword">in</a>
+    <a id="9288" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="9290" href="/CallByName/#9071" class="Bound">N&#39;</a> <a id="9293" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9295" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="9297" href="/CallByName/#9245" class="Bound">g</a> <a id="9299" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="9301" href="/CallByName/#9085" class="Bound">c≈N&#39;</a> <a id="9306" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="9308" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a></pre>
+
+<p>The proof is by induction on <code class="highlighter-rouge">γ ⊢ M ⇓ c</code>. We have three cases
+to consider.</p>
+
+<ul>
+  <li>
+    <p>Case <code class="highlighter-rouge">⇓-var</code>.
+So we have <code class="highlighter-rouge">γ x ≡ clos L δ</code> and <code class="highlighter-rouge">δ ⊢ L ⇓ c</code>.
+We need to show that <code class="highlighter-rouge">⟪ σ ⟫ x —↠ N</code> and <code class="highlighter-rouge">c ≈ N</code> for some <code class="highlighter-rouge">N</code>.
+The premise <code class="highlighter-rouge">γ ≈ₑ σ</code> tells us that <code class="highlighter-rouge">γ x ≈ σ x</code>, so <code class="highlighter-rouge">clos L δ ≈ σ x</code>.
+By the definition of <code class="highlighter-rouge">≈</code>, there exists a <code class="highlighter-rouge">τ</code> such that
+<code class="highlighter-rouge">δ ≈ₑ τ</code> and <code class="highlighter-rouge">σ x ≡ ⟪ τ ⟫ L </code>.
+Using <code class="highlighter-rouge">δ ⊢ L ⇓ c</code> and <code class="highlighter-rouge">δ ≈ₑ τ</code>, 
+the induction hypothesis gives us
+<code class="highlighter-rouge">⟪ τ ⟫ L —↠ N</code> and <code class="highlighter-rouge">c ≈ N</code> for some <code class="highlighter-rouge">N</code>.
+So we have shown that <code class="highlighter-rouge">⟪ σ ⟫ x —↠ N</code> and <code class="highlighter-rouge">c ≈ N</code> for some <code class="highlighter-rouge">N</code>.</p>
+  </li>
+  <li>
+    <p>Case <code class="highlighter-rouge">⇓-lam</code>.
+We immediately have <code class="highlighter-rouge">⟪ σ ⟫ (ƛ N) —↠ ⟪ σ ⟫ (ƛ N)</code>
+and <code class="highlighter-rouge">clos (⟪ σ ⟫ (ƛ N)) γ ≈ ⟪ σ ⟫ (ƛ N)</code>.</p>
+  </li>
+  <li>
+    <p>Case <code class="highlighter-rouge">⇓-app</code>.
+Using <code class="highlighter-rouge">γ ⊢ L ⇓ clos N δ</code> and <code class="highlighter-rouge">γ ≈ₑ σ</code>, 
+the induction hypothesis gives us</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ⟪ σ ⟫ L —↠ ƛ ⟪ exts τ ⟫ N                                           (1)
+</code></pre></div>    </div>
+
+    <p>and <code class="highlighter-rouge">δ ≈ₑ τ</code> for some <code class="highlighter-rouge">τ</code>.
+From <code class="highlighter-rouge">γ≈ₑσ</code> we have <code class="highlighter-rouge">clos M γ ≈ ⟪ σ ⟫ M</code>.
+Then with <code class="highlighter-rouge">(δ ,' clos M γ) ⊢ N ⇓ c</code>,
+the induction hypothesis gives us <code class="highlighter-rouge">c ≈ N'</code> and</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ⟪ exts τ ⨟ subst-zero (⟪ σ ⟫ M) ⟫ N —↠ N'                           (2)
+</code></pre></div>    </div>
+
+    <p>Meanwhile, by <code class="highlighter-rouge">β</code>, we have</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  (ƛ ⟪ exts τ ⟫ N) · ⟪ σ ⟫ M —→ ⟪ subst-zero (⟪ σ ⟫ M) ⟫ (⟪ exts τ ⟫ N)
+</code></pre></div>    </div>
+
+    <p>which is the same as the following, by <code class="highlighter-rouge">sub-sub</code>.</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  (ƛ ⟪ exts τ ⟫ N) · ⟪ σ ⟫ M —→ ⟪ exts τ ⨟ subst-zero (⟪ σ ⟫ M) ⟫  N  (3)
+</code></pre></div>    </div>
+
+    <p>Using (3) and (2) we have</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  (ƛ ⟪ exts τ ⟫ N) · ⟪ σ ⟫ M —↠ N'                                    (4)
+</code></pre></div>    </div>
+
+    <p>From (1) we have</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ⟪ σ ⟫ L · ⟪ σ ⟫ M —↠ (ƛ ⟪ exts τ ⟫ N) · ⟪ σ ⟫ M
+</code></pre></div>    </div>
+
+    <p>which we combine with (4) to conclude that</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  ⟪ σ ⟫ L · ⟪ σ ⟫ M —↠ N'
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p>With the main lemma complete, we establish the forward direction
+of the equivalence between the big-step semantics and beta reduction.</p>
+
+<pre class="Agda"><a id="cbn→reduce"></a><a id="11068" href="/CallByName/#11068" class="Function">cbn→reduce</a> <a id="11079" class="Symbol">:</a>  <a id="11082" class="Symbol">∀{</a><a id="11084" href="/CallByName/#11084" class="Bound">M</a> <a id="11086" class="Symbol">:</a> <a id="11088" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="11090" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="11092" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="11093" class="Symbol">}{</a><a id="11095" href="/CallByName/#11095" class="Bound">Δ</a><a id="11096" class="Symbol">}{</a><a id="11098" href="/CallByName/#11098" class="Bound">δ</a> <a id="11100" class="Symbol">:</a> <a id="11102" href="/CallByName/#2462" class="Function">ClosEnv</a> <a id="11110" href="/CallByName/#11095" class="Bound">Δ</a><a id="11111" class="Symbol">}{</a><a id="11113" href="/CallByName/#11113" class="Bound">N′</a> <a id="11116" class="Symbol">:</a> <a id="11118" href="/CallByName/#11095" class="Bound">Δ</a> <a id="11120" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="11122" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="11124" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="11126" href="/Untyped/#2694" class="InductiveConstructor">★</a><a id="11127" class="Symbol">}</a>
+     <a id="11134" class="Symbol">→</a> <a id="11136" href="/CallByName/#2691" class="Function">∅&#39;</a> <a id="11139" href="/CallByName/#3054" class="Datatype Operator">⊢</a> <a id="11141" href="/CallByName/#11084" class="Bound">M</a> <a id="11143" href="/CallByName/#3054" class="Datatype Operator">⇓</a> <a id="11145" href="/CallByName/#2511" class="InductiveConstructor">clos</a> <a id="11150" class="Symbol">(</a><a id="11151" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="11153" href="/CallByName/#11113" class="Bound">N′</a><a id="11155" class="Symbol">)</a> <a id="11157" href="/CallByName/#11098" class="Bound">δ</a>
+       <a id="11166" class="Comment">-----------------------------</a>
+     <a id="11201" class="Symbol">→</a> <a id="11203" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">Σ[</a> <a id="11206" href="/CallByName/#11206" class="Bound">N</a> <a id="11208" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">∈</a> <a id="11210" href="/Untyped/#3002" class="InductiveConstructor">∅</a> <a id="11212" href="/Untyped/#3018" class="InductiveConstructor Operator">,</a> <a id="11214" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="11216" href="/Untyped/#4150" class="Datatype Operator">⊢</a> <a id="11218" href="/Untyped/#2694" class="InductiveConstructor">★</a> <a id="11220" href="https://agda.github.io/agda-stdlib/Data.Product.html#764" class="Function">]</a> <a id="11222" class="Symbol">(</a><a id="11223" href="/CallByName/#11084" class="Bound">M</a> <a id="11225" href="/LambdaReduction/#894" class="Datatype Operator">—↠</a> <a id="11228" href="/Untyped/#4238" class="InductiveConstructor Operator">ƛ</a> <a id="11230" href="/CallByName/#11206" class="Bound">N</a><a id="11231" class="Symbol">)</a>
+<a id="11233" href="/CallByName/#11068" class="Function">cbn→reduce</a> <a id="11244" class="Symbol">{</a><a id="11245" href="/CallByName/#11245" class="Bound">M</a><a id="11246" class="Symbol">}{</a><a id="11248" href="/CallByName/#11248" class="Bound">Δ</a><a id="11249" class="Symbol">}{</a><a id="11251" href="/CallByName/#11251" class="Bound">δ</a><a id="11252" class="Symbol">}{</a><a id="11254" href="/CallByName/#11254" class="Bound">N′</a><a id="11256" class="Symbol">}</a> <a id="11258" href="/CallByName/#11258" class="Bound">M⇓c</a>
+    <a id="11266" class="Keyword">with</a> <a id="11271" href="/CallByName/#8204" class="Function">⇓→—↠×𝔹</a><a id="11277" class="Symbol">{</a><a id="11278" class="Argument">σ</a> <a id="11280" class="Symbol">=</a> <a id="11282" href="/Substitution/#2591" class="Function">ids</a><a id="11285" class="Symbol">}</a> <a id="11287" href="/CallByName/#11258" class="Bound">M⇓c</a> <a id="11291" href="/CallByName/#6671" class="Function">≈ₑ-id</a>
+<a id="11297" class="Symbol">...</a> <a id="11301" class="Symbol">|</a> <a id="11303" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="11305" href="/CallByName/#11305" class="Bound">N</a> <a id="11307" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="11309" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="11311" href="/CallByName/#11311" class="Bound">rs</a> <a id="11314" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="11316" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="11318" href="/CallByName/#11318" class="Bound">σ</a> <a id="11320" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="11322" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="11324" href="/CallByName/#11324" class="Bound">h</a> <a id="11326" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="11328" href="/CallByName/#11328" class="Bound">eq2</a> <a id="11332" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="11334" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="11336" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a> <a id="11338" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a>
+    <a id="11344" class="Keyword">rewrite</a> <a id="11352" href="/Substitution/#16886" class="Function">sub-id</a><a id="11358" class="Symbol">{</a><a id="11359" class="Argument">M</a> <a id="11361" class="Symbol">=</a> <a id="11363" class="Bound">M</a><a id="11364" class="Symbol">}</a> <a id="11366" class="Symbol">|</a> <a id="11368" href="/CallByName/#11328" class="Bound">eq2</a> <a id="11372" class="Symbol">=</a>
+    <a id="11378" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟨</a> <a id="11380" href="/Substitution/#2076" class="Function Operator">⟪</a> <a id="11382" href="/Untyped/#6623" class="Function">exts</a> <a id="11387" href="/CallByName/#11318" class="Bound">σ</a> <a id="11389" href="/Substitution/#2076" class="Function Operator">⟫</a> <a id="11391" class="Bound">N′</a> <a id="11394" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">,</a> <a id="11396" href="/CallByName/#11311" class="Bound">rs</a> <a id="11399" href="https://agda.github.io/agda-stdlib/Agda.Builtin.Sigma.html#139" class="InductiveConstructor Operator">⟩</a></pre>
+
+<p>The proof of the backward direction, that beta reduction to a lambda
+implies that the big-step semantics produces a result, will leverage the
+denotational semantics defined in the next chapter, and appears in the
+chapter on Adequacy.</p>
+
+<p>[PLW: can we do a direct proof of the backward direction?]</p>
+
+<h2 id="notes">Notes</h2>
+
+<p>In the seminal article <em>Call-by-name, call-by-value, and the
+λ-calculus</em>, Plotkin defined a call-by-name partial function similar
+to the big-step semantics in this chapter, except that it used
+substitution instead of environments. Corollary 2 (page 146) of his
+article states that a term <code class="highlighter-rouge">M</code> beta reduces to a lambda abstraction if
+and only if call-by-name produces a value. His proof is quite
+different from ours in that it relies on two auxilliary reduction
+relations called <em>left reduction</em> and <em>standard reduction</em>. Theorem 1
+(Standardisation) states that <code class="highlighter-rouge">M —↠ L</code> if and only if <code class="highlighter-rouge">M</code> goes to <code class="highlighter-rouge">L</code>
+via standard reductions.  Corollary 1 then establishes that <code class="highlighter-rouge">M —↠ ƛ N</code>
+if and only if <code class="highlighter-rouge">M</code> goes to <code class="highlighter-rouge">ƛ N′</code>, for some <code class="highlighter-rouge">N′</code>, by left
+reduction. Theorem 2 then connects call-by-name evaluation to left
+reduction.  Finally, Corollary 2 combines these results to show that
+<code class="highlighter-rouge">M —↠ ƛ N</code> if and only if call-by-name produces a value.</p>
+
+<h2 id="unicode">Unicode</h2>
+
+<p>This chapter uses the following unicode:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>≈  U+2248  ALMOST EQUAL TO (\~~ or \approx)
+ₑ  U+2091  LATIN SUBSCRIPT SMALL LETTER E (\_e)
+⊢  U+22A2  RIGHT TACK (\|- or \vdash)
+⇓  U+21DB  DOWNWARDS DOUBLE ARROW (\d= or \Downarrow)
+</code></pre></div></div>
+
+
+  </div>
+
+  <p style="text-align:center;">
+    
+    <a alt="Previous chapter" href="/Confluence/">Prev</a>
+    &bullet;
+    
+    
+    <a alt="Source code" href="https://github.com/plfa/plfa.github.io/blob/dev/src/plfa/CallByName.lagda">Source</a>
+    
+    
+    &bullet;
+    <a alt="Next chapter" href="/Denotational/">Next</a>
+    
+</p>
+
+
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Programming Language Foundations in Agda
+</h2><div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Philip Wadler</li>
+          <li><a class="u-email" href="mailto:wadler@inf.ed.ac.uk">wadler@inf.ed.ac.uk</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/wadler"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">wadler</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3"></div>
+    </div><div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Wen Kokke</li>
+          <li><a class="u-email" href="mailto:wen.kokke@ed.ac.uk">wen.kokke@ed.ac.uk</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/wenkokke"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">wenkokke</span></a></li><li><a href="https://www.twitter.com/wenkokke"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">wenkokke</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3"></div>
+    </div>This work is licensed under a <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>
+  </div>
+</footer>
+<!-- Import jQuery -->
+<script type="text/javascript" src="/assets/jquery.js"></script>
+
+<!-- Script which allows for foldable code blocks -->
+<script type="text/javascript">
+ $('div.foldable pre').each(function(){
+     var autoHeight = $(this).height();
+     var lineHeight = parseFloat($(this).css('line-height'));
+
+     var plus    = $("<div></div>");
+     var horLine = $("<div></div>");
+     var verLine = $("<div></div>");
+     $(this).prepend(plus);
+     plus.css({
+         'position'         : 'relative',
+         'float'            : 'right',
+         'right'            : '-' + (0.5 * lineHeight - 1.5) + 'px',
+         'width'            : lineHeight,
+         'height'           : lineHeight});
+     verLine.css({
+         'position'         : 'relative',
+         'height'           : lineHeight,
+         'width'            : '3px',
+         'background-color' : '#C1E0FF'});
+     horLine.css({
+         'position'         : 'relative',
+         'top'              : '-' + (0.5 * lineHeight + 1.5) + 'px',
+         'left'             : '-' + (0.5 * lineHeight - 1.5) + 'px',
+         'height'           : '3px',
+         'width'            : lineHeight,
+         'background-color' : '#C1E0FF'});
+     plus.append(verLine);
+     plus.append(horLine);
+
+     $(this).height(2.0 * lineHeight);
+     $(this).css('overflow','hidden');
+
+     $(this).click(function(){
+         if ($(this).height() == autoHeight) {
+             $(this).height(2.0 * lineHeight);
+             plus.show();
+         }
+         else {
+             $(this).height('auto');
+             plus.hide();
+         }
+     });
+ });
+</script>
+
+<!-- Import KaTeX -->
+<script type="text/javascript" src="/assets/katex.js"></script>
+
+<!-- Script which renders TeX using KaTeX -->
+<script type="text/javascript">
+ $("script[type='math/tex']").replaceWith(
+     function(){
+         var tex = $(this).text();
+         return "<span class=\"inline-equation\">" +
+                katex.renderToString(tex) +
+                "</span>";
+     });
+ $("script[type='math/tex; mode=display']").replaceWith(
+     function(){
+         var tex = $(this).text().replace(/%.*?(\n|$)/g,"");
+         return "<div class=\"equation\">" +
+                katex.renderToString("\\displaystyle "+tex) +
+                "</div>";
+     });
+</script>
+</body>
+
+</html>
